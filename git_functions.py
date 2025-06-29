@@ -242,6 +242,8 @@ class GitFunctions:
     def handle_commit_and_push(self):
         self.run_in_thread(self._commit_and_push_task)()
 
+    # git_functions.py faylında bu funksiyanı tapıb tam əvəz edin
+
     def _commit_and_push_task(self):
         msg = self.app.commit_message_entry.get()
         if not all([self.source_repo_path, self.target_repo_url, msg]):
@@ -249,11 +251,15 @@ class GitFunctions:
             return
         if not self.repo_object or self.repo_object.working_dir != self.source_repo_path:
             if not self.load_source_repo(self.source_repo_path): return
+        
         try:
             log("Push tapşırığı başladı...")
+            # Add və Commit əməliyyatları
             self.repo_object.git.add(A=True)
             log("Dəyişikliklər qeyd edilir (commit)...")
             self.repo_object.index.commit(msg)
+            
+            # Remote anbarın hazırlanması
             remote_name = "hədəf_depo"
             if remote_name in self.repo_object.remotes:
                 remote = self.repo_object.remotes[remote_name]
@@ -261,24 +267,69 @@ class GitFunctions:
                     remote.set_url(self.target_repo_url)
             else:
                 remote = self.repo_object.create_remote(remote_name, self.target_repo_url)
-            log("Dəyişikliklər göndərilir (push)...")
-            push_info = remote.push(refspec='+HEAD:main', set_upstream=True)
-            push_error = False
+
+            # --- YENİ TƏHLÜKƏSİZLİK MƏNTİQİ ---
+            
+            log("Təhlükəsiz push cəhd edilir...")
+            # Əvvəlcə force olmadan, normal push etməyə çalış
+            push_info = remote.push(refspec='HEAD:main', set_upstream=True)
+            
+            # Nəticəni yoxla
+            is_rejected = False
+            rejection_summary = ""
             for info in push_info:
-                if info.flags & (info.ERROR | info.REJECTED):
-                    log(f"!!! PUSH FAILED/REJECTED: {info.summary}")
-                    self.app.after(0, messagebox.showerror, "Push Xətası", f"Dəyişikliklər göndərilərkən xəta baş verdi:\n\n{info.summary}")
-                    push_error = True
+                if info.flags & info.REJECTED or info.flags & info.ERROR:
+                    is_rejected = True
+                    rejection_summary = info.summary
                     break
-            if not push_error:
+            
+            # Əgər push rədd edilibsə (adətən tarixçə uyğunsuzluğu)
+            if is_rejected:
+                log(f"!!! PUSH RƏDD EDİLDİ: {rejection_summary}")
+                
+                # İstifadəçidən force push üçün icazə al
+                user_confirmation = messagebox.askyesno(
+                    "Push Xətası və Məlumat İtkisi Riski",
+                    f"Push əməliyyatı rədd edildi:\n\n{rejection_summary}\n\n"
+                    "Bu xəta adətən onlayn depoda sizin lokalınızda olmayan fərqli commitlər olduqda baş verir.\n\n"
+                    "Məcburi göndərmə (Force Push) etmək istəyirsinizmi?\n\n"
+                    "DİQQƏT: Bu əməliyyat onlayn depodakı bütün köhnə tarixçəni siləcək və onu sizin lokal tarixçənizlə əvəz edəcək!",
+                    icon='warning'
+                )
+
+                # Əgər istifadəçi təsdiq edərsə, bu dəfə force push et
+                if user_confirmation:
+                    log("İstifadəçi təsdiqindən sonra force push edilir...")
+                    self.app.after(0, self._update_status, "İcazə verildi. Məcburi göndərmə (force push) edilir...", "yellow")
+                    force_push_info = remote.push(refspec='+HEAD:main', set_upstream=True)
+                    
+                    # Force push nəticəsini də yoxla
+                    force_push_error = False
+                    for f_info in force_push_info:
+                        if f_info.flags & (f_info.ERROR | f_info.REJECTED):
+                            log(f"!!! FORCE PUSH DA UĞURSUZ OLDU: {f_info.summary}")
+                            self.app.after(0, messagebox.showerror, "Xəta", f"Məcburi göndərmə də uğursuz oldu:\n\n{f_info.summary}")
+                            force_push_error = True
+                            break
+                    if not force_push_error:
+                         self.app.after(0, self._update_status, "Məcburi göndərmə uğurla tamamlandı!", "lightgreen")
+                else:
+                    log("İstifadəçi force push-dan imtina etdi.")
+                    self.app.after(0, self._update_status, "Əməliyyat ləğv edildi.", "gray")
+                    return # Əməliyyatı dayandır
+
+            # Əgər ilkin push uğurlu olubsa
+            else:
                 self.app.after(0, self._update_status, "Dəyişikliklər uğurla göndərildi!", "lightgreen")
-                self.app.after(0, self.app.commit_message_entry.delete, 0, 'end')
-                self.run_in_thread(self.populate_local_commit_history)()
-                self.run_in_thread(self.fetch_online_commits, self.active_repo_data)()
+
+            # Hər iki halda (uğurlu push və ya uğurlu force push) interfeysi yenilə
+            self.app.after(0, self.app.commit_message_entry.delete, 0, 'end')
+            self.run_in_thread(self.populate_local_commit_history)()
+            self.run_in_thread(self.fetch_online_commits, self.active_repo_data)()
+
         except Exception as e:
             log(f"!!! GÖZLƏNİLMƏZ PUSH XƏTASI: {e}")
             self.app.after(0, messagebox.showerror, "Gözlənilməz Xəta", str(e))
-
     def handle_zip_commit(self):
         log("'.zip Yüklə' düyməsi sıxıldı.")
         if not self.selected_commit_hash:
