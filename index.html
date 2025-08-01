@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kule Savunma Oyunu</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+
+        .game-container {
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .game-title {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .game-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+        }
+
+        .stat {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .game-area {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+        }
+
+        .game-board {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            position: relative;
+        }
+
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(15, 40px);
+            grid-template-rows: repeat(10, 40px);
+            gap: 2px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .cell {
+            width: 40px;
+            height: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .cell:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .cell.path {
+            background: linear-gradient(45deg, #ff6b6b, #ffa500);
+        }
+
+        .cell.tower {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            color: white;
+            font-weight: bold;
+        }
+
+        .cell.enemy {
+            background: linear-gradient(45deg, #ff4757, #ff3742);
+            color: white;
+            font-weight: bold;
+            animation: pulse 1s infinite;
+        }
+
+        .cell.projectile {
+            background: #ffd700;
+            border-radius: 50%;
+            animation: projectile 0.5s linear;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        @keyframes projectile {
+            0% { transform: scale(0.5); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        .sidebar {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .tower-selection {
+            margin-bottom: 20px;
+        }
+
+        .tower-option {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid transparent;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .tower-option:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: #4ecdc4;
+        }
+
+        .tower-option.selected {
+            border-color: #4ecdc4;
+            background: rgba(78, 205, 196, 0.3);
+        }
+
+        .tower-cost {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .game-controls {
+            margin-top: 20px;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:disabled {
+            background: rgba(255, 255, 255, 0.2);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .wave-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .health-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #ffa500);
+            transition: width 0.3s ease;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 1000;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1 class="game-title">🏰 Kule Savunma Oyunu</h1>
+        </div>
+        
+        <div class="game-stats">
+            <div class="stat">💰 Para: <span id="money">100</span></div>
+            <div class="stat">❤️ Can: <span id="lives">20</span></div>
+            <div class="stat">🌊 Dalga: <span id="wave">1</span></div>
+            <div class="stat">⚡ Skor: <span id="score">0</span></div>
+        </div>
+
+        <div class="game-area">
+            <div class="game-board">
+                <div class="board-grid" id="gameBoard"></div>
+                
+                <div class="game-over hidden" id="gameOver">
+                    <h2>Oyun Bitti!</h2>
+                    <p>Skorunuz: <span id="finalScore">0</span></p>
+                    <button class="btn" onclick="restartGame()">Yeniden Başla</button>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="wave-info">
+                    <h3>🌊 Dalga Bilgisi</h3>
+                    <p>Düşman: <span id="enemiesLeft">0</span></p>
+                    <div class="health-bar">
+                        <div class="health-fill" id="waveProgress" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="tower-selection">
+                    <h3>🏗️ Kule Seç</h3>
+                    <div class="tower-option" data-tower="basic">
+                        <div>⚔️ Temel Kule</div>
+                        <div class="tower-cost">Maliyet: 50</div>
+                    </div>
+                    <div class="tower-option" data-tower="sniper">
+                        <div>🎯 Keskin Nişancı</div>
+                        <div class="tower-cost">Maliyet: 100</div>
+                    </div>
+                    <div class="tower-option" data-tower="cannon">
+                        <div>💥 Top</div>
+                        <div class="tower-cost">Maliyet: 150</div>
+                    </div>
+                </div>
+
+                <div class="game-controls">
+                    <button class="btn" id="startWave">🌊 Dalga Başlat</button>
+                    <button class="btn" onclick="restartGame()">🔄 Yeniden Başla</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class TowerDefenseGame {
+            constructor() {
+                this.boardWidth = 15;
+                this.boardHeight = 10;
+                this.cellSize = 40;
+                this.money = 100;
+                this.lives = 20;
+                this.wave = 1;
+                this.score = 0;
+                this.selectedTower = null;
+                this.towers = [];
+                this.enemies = [];
+                this.projectiles = [];
+                this.gameRunning = false;
+                this.enemiesInWave = 0;
+                this.enemiesSpawned = 0;
+                this.path = this.generatePath();
+                
+                this.towerTypes = {
+                    basic: { cost: 50, damage: 20, range: 2, fireRate: 1000, symbol: '⚔️' },
+                    sniper: { cost: 100, damage: 50, range: 4, fireRate: 2000, symbol: '🎯' },
+                    cannon: { cost: 150, damage: 80, range: 3, fireRate: 1500, symbol: '💥' }
+                };
+
+                this.init();
+            }
+
+            init() {
+                this.createBoard();
+                this.setupEventListeners();
+                this.updateUI();
+                this.gameLoop();
+            }
+
+            generatePath() {
+                // Basit bir yol oluştur
+                const path = [];
+                // Yatay yol
+                for (let x = 0; x < 5; x++) {
+                    path.push({x, y: 5});
+                }
+                // Dikey yol
+                for (let y = 5; y < 8; y++) {
+                    path.push({x: 4, y});
+                }
+                // Yatay yol devamı
+                for (let x = 4; x < 10; x++) {
+                    path.push({x, y: 7});
+                }
+                // Dikey yol devamı
+                for (let y = 7; y < 10; y++) {
+                    path.push({x: 9, y});
+                }
+                // Son yatay yol
+                for (let x = 9; x < 15; x++) {
+                    path.push({x, y: 9});
+                }
+                return path;
+            }
+
+            createBoard() {
+                const board = document.getElementById('gameBoard');
+                board.innerHTML = '';
+
+                for (let y = 0; y < this.boardHeight; y++) {
+                    for (let x = 0; x < this.boardWidth; x++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        cell.dataset.x = x;
+                        cell.dataset.y = y;
+
+                        // Yol hücrelerini işaretle
+                        if (this.isOnPath(x, y)) {
+                            cell.classList.add('path');
+                        }
+
+                        board.appendChild(cell);
+                    }
+                }
+            }
+
+            isOnPath(x, y) {
+                return this.path.some(point => point.x === x && point.y === y);
+            }
+
+            setupEventListeners() {
+                // Kule seçimi
+                document.querySelectorAll('.tower-option').forEach(option => {
+                    option.addEventListener('click', () => {
+                        document.querySelectorAll('.tower-option').forEach(opt => opt.classList.remove('selected'));
+                        option.classList.add('selected');
+                        this.selectedTower = option.dataset.tower;
+                    });
+                });
+
+                // Hücre tıklama
+                document.getElementById('gameBoard').addEventListener('click', (e) => {
+                    if (e.target.classList.contains('cell')) {
+                        this.handleCellClick(e.target);
+                    }
+                });
+
+                // Dalga başlatma
+                document.getElementById('startWave').addEventListener('click', () => {
+                    if (!this.gameRunning) {
+                        this.startWave();
+                    }
+                });
+            }
+
+            handleCellClick(cell) {
+                if (!this.selectedTower) return;
+
+                const x = parseInt(cell.dataset.x);
+                const y = parseInt(cell.dataset.y);
+
+                // Yol üzerine kule inşa edilemez
+                if (this.isOnPath(x, y)) return;
+
+                // Zaten kule var mı kontrol et
+                if (this.towers.some(tower => tower.x === x && tower.y === y)) return;
+
+                const towerType = this.towerTypes[this.selectedTower];
+                if (this.money >= towerType.cost) {
+                    this.money -= towerType.cost;
+                    this.towers.push({
+                        x, y,
+                        type: this.selectedTower,
+                        damage: towerType.damage,
+                        range: towerType.range,
+                        fireRate: towerType.fireRate,
+                        lastFired: 0,
+                        symbol: towerType.symbol
+                    });
+
+                    cell.classList.add('tower');
+                    cell.textContent = towerType.symbol;
+                    this.updateUI();
+                }
+            }
+
+            startWave() {
+                this.gameRunning = true;
+                this.enemiesInWave = 5 + this.wave * 2;
+                this.enemiesSpawned = 0;
+                document.getElementById('startWave').disabled = true;
+                this.spawnEnemy();
+            }
+
+            spawnEnemy() {
+                if (this.enemiesSpawned < this.enemiesInWave) {
+                    const enemy = {
+                        x: 0,
+                        y: 5,
+                        health: 50 + this.wave * 10,
+                        maxHealth: 50 + this.wave * 10,
+                        speed: 0.02,
+                        pathIndex: 0,
+                        symbol: '👹'
+                    };
+
+                    this.enemies.push(enemy);
+                    this.enemiesSpawned++;
+
+                    setTimeout(() => this.spawnEnemy(), 1000);
+                }
+            }
+
+            updateEnemies() {
+                for (let i = this.enemies.length - 1; i >= 0; i--) {
+                    const enemy = this.enemies[i];
+                    
+                    // Yol boyunca hareket et
+                    if (enemy.pathIndex < this.path.length - 1) {
+                        const targetPoint = this.path[enemy.pathIndex + 1];
+                        const dx = targetPoint.x - enemy.x;
+                        const dy = targetPoint.y - enemy.y;
+                        
+                        if (Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1) {
+                            enemy.pathIndex++;
+                        } else {
+                            enemy.x += dx * enemy.speed;
+                            enemy.y += dy * enemy.speed;
+                        }
+                    } else {
+                        // Hedef noktaya ulaştı
+                        this.lives--;
+                        this.enemies.splice(i, 1);
+                        this.updateUI();
+                        
+                        if (this.lives <= 0) {
+                            this.gameOver();
+                        }
+                    }
+                }
+            }
+
+            updateTowers() {
+                const now = Date.now();
+                
+                this.towers.forEach(tower => {
+                    if (now - tower.lastFired > tower.fireRate) {
+                        const target = this.findTarget(tower);
+                        if (target) {
+                            this.fireProjectile(tower, target);
+                            tower.lastFired = now;
+                        }
+                    }
+                });
+            }
+
+            findTarget(tower) {
+                let closestEnemy = null;
+                let closestDistance = Infinity;
+
+                this.enemies.forEach(enemy => {
+                    const distance = Math.sqrt(
+                        Math.pow(enemy.x - tower.x, 2) + Math.pow(enemy.y - tower.y, 2)
+                    );
+                    
+                    if (distance <= tower.range && distance < closestDistance) {
+                        closestDistance = distance;
+                        closestEnemy = enemy;
+                    }
+                });
+
+                return closestEnemy;
+            }
+
+            fireProjectile(tower, target) {
+                const projectile = {
+                    x: tower.x,
+                    y: tower.y,
+                    targetX: target.x,
+                    targetY: target.y,
+                    damage: tower.damage,
+                    speed: 0.1,
+                    symbol: '⚡'
+                };
+
+                this.projectiles.push(projectile);
+            }
+
+            updateProjectiles() {
+                for (let i = this.projectiles.length - 1; i >= 0; i--) {
+                    const projectile = this.projectiles[i];
+                    
+                    // Hedefe doğru hareket et
+                    const dx = projectile.targetX - projectile.x;
+                    const dy = projectile.targetY - projectile.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 0.1) {
+                        // Hedefi vur
+                        this.hitEnemy(projectile.targetX, projectile.targetY, projectile.damage);
+                        this.projectiles.splice(i, 1);
+                    } else {
+                        projectile.x += (dx / distance) * projectile.speed;
+                        projectile.y += (dy / distance) * projectile.speed;
+                    }
+                }
+            }
+
+            hitEnemy(x, y, damage) {
+                const enemy = this.enemies.find(e => 
+                    Math.abs(e.x - x) < 0.5 && Math.abs(e.y - y) < 0.5
+                );
+                
+                if (enemy) {
+                    enemy.health -= damage;
+                    if (enemy.health <= 0) {
+                        this.enemies = this.enemies.filter(e => e !== enemy);
+                        this.money += 10;
+                        this.score += 10;
+                        this.updateUI();
+                    }
+                }
+            }
+
+            checkWaveComplete() {
+                if (this.enemies.length === 0 && this.enemiesSpawned >= this.enemiesInWave) {
+                    this.wave++;
+                    this.gameRunning = false;
+                    this.money += 50;
+                    document.getElementById('startWave').disabled = false;
+                    this.updateUI();
+                }
+            }
+
+            updateUI() {
+                document.getElementById('money').textContent = this.money;
+                document.getElementById('lives').textContent = this.lives;
+                document.getElementById('wave').textContent = this.wave;
+                document.getElementById('score').textContent = this.score;
+                
+                const enemiesLeft = this.enemiesInWave - this.enemiesSpawned + this.enemies.length;
+                document.getElementById('enemiesLeft').textContent = enemiesLeft;
+                
+                const progress = ((this.enemiesInWave - enemiesLeft) / this.enemiesInWave) * 100;
+                document.getElementById('waveProgress').style.width = progress + '%';
+            }
+
+            render() {
+                // Hücreleri temizle
+                document.querySelectorAll('.cell').forEach(cell => {
+                    cell.classList.remove('enemy', 'projectile');
+                    cell.textContent = '';
+                });
+
+                // Düşmanları çiz
+                this.enemies.forEach(enemy => {
+                    const cell = this.getCellAt(Math.floor(enemy.x), Math.floor(enemy.y));
+                    if (cell) {
+                        cell.classList.add('enemy');
+                        cell.textContent = enemy.symbol;
+                    }
+                });
+
+                // Mermileri çiz
+                this.projectiles.forEach(projectile => {
+                    const cell = this.getCellAt(Math.floor(projectile.x), Math.floor(projectile.y));
+                    if (cell) {
+                        cell.classList.add('projectile');
+                        cell.textContent = projectile.symbol;
+                    }
+                });
+            }
+
+            getCellAt(x, y) {
+                return document.querySelector(`[data-x="${x}"][data-y="${y}"]`);
+            }
+
+            gameOver() {
+                this.gameRunning = false;
+                document.getElementById('finalScore').textContent = this.score;
+                document.getElementById('gameOver').classList.remove('hidden');
+            }
+
+            gameLoop() {
+                if (this.gameRunning) {
+                    this.updateEnemies();
+                    this.updateTowers();
+                    this.updateProjectiles();
+                    this.checkWaveComplete();
+                }
+                
+                this.render();
+                requestAnimationFrame(() => this.gameLoop());
+            }
+        }
+
+        let game;
+
+        function restartGame() {
+            game = new TowerDefenseGame();
+            document.getElementById('gameOver').classList.add('hidden');
+        }
+
+        // Oyunu başlat
+        window.onload = () => {
+            game = new TowerDefenseGame();
+        };
+    </script>
+</body>
+</html>
